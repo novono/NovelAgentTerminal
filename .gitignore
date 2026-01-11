@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.log
+llm.report
+.DS_Store
+# 忽略生成的小说文件夹
+novel/
+short_novels/
+
+# Config secrets
+config/llm.json

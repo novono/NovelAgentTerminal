@@ -1,0 +1,89 @@
+{
+    // ==========================================
+    // LLM Configuration / LLM 配置文件
+    // ==========================================
+    // 推荐使用 Gemini 或 OpenAI 系列模型，逻辑推理能力更强，生成的小说质量更高。
+    // Recommended: Gemini or OpenAI models for better reasoning and higher quality output.
+    
+    "models": {
+        // --- Google Gemini (推荐/Recommended) ---
+        // 申请地址: https://aistudio.google.com/
+        "gemini-2.0-flash": {
+            "api_key": "YOUR_API_KEY_HERE",
+            "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+            "model_name": "gemini-2.0-flash",
+            "min_interval": 1.0 // 请求间隔限制 (秒) / Rate limit interval (seconds)
+        },
+        "gemini-1.5-pro": {
+            "api_key": "YOUR_API_KEY_HERE",
+            "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+            "model_name": "gemini-1.5-pro",
+            "min_interval": 2.0
+        },
+
+        // --- OpenAI (推荐/Recommended) ---
+        "gpt-4o": {
+            "api_key": "YOUR_API_KEY_HERE",
+            "base_url": "https://api.openai.com/v1",
+            "model_name": "gpt-4o",
+            "min_interval": 0.5
+        },
+
+        // --- DeepSeek (性价比之选) ---
+        "deepseek-chat": {
+            "api_key": "YOUR_API_KEY_HERE",
+            "base_url": "https://api.deepseek.com/v1",
+            "model_name": "deepseek-chat",
+            "min_interval": 0.1
+        },
+
+        // --- Zhipu AI / 智谱清言 ---
+        "glm-4": {
+            "api_key": "YOUR_API_KEY_HERE",
+            "base_url": "https://open.bigmodel.cn/api/paas/v4/",
+            "model_name": "glm-4",
+            "min_interval": 1.0
+        },
+
+        // --- Doubao / 豆包 ---
+        "doubao": {
+            "api_key": "YOUR_API_KEY_HERE",
+            "base_url": "https://ark.cn-beijing.volces.com/api/v3",
+            "model_name": "doubao-pro-32k", // 请替换为您的 endpoint ID
+            "min_interval": 0.5
+        },
+
+        // --- Local LLM (via LM Studio / Ollama) ---
+        // 本地模型配置示例
+        "local": {
+            "api_key": "lm-studio",
+            "base_url": "http://localhost:1234/v1",
+            "model_name": "qwen2.5-7b-instruct",
+            "min_interval": 0.1
+        }
+    },
+
+    // ==========================================
+    // Active Configuration / 激活配置
+    // ==========================================
+    "active_config": {
+        // 负责撰写正文的模型 (建议使用长上下文、文笔好的模型)
+        // Model for writing chapters (Long context & good creative writing preferred)
+        "author_model_key": "gemini-2.0-flash",
+
+        // 负责审核和剧情策划的模型 (建议使用逻辑强的模型)
+        // Model for reviewing and planning (Strong reasoning preferred)
+        "reviewer_model_key": "gemini-1.5-pro",
+
+        // 是否显示思考过程 (仅部分模型支持)
+        // Whether to show thinking process (Only supported by some models)
+        "show_thinking": false
+    },
+
+    // ==========================================
+    // Fallback Order / 故障转移顺序
+    // ==========================================
+    // 当主模型失败时，尝试使用的备用模型
+    // Backup models to use when the primary model fails
+    "fallback_order": ["gpt-4o", "deepseek-chat", "local"]
+}
