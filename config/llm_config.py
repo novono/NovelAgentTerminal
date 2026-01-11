@@ -90,7 +90,8 @@ class LLMConfig:
             import re
             
             # Simple comment removal
-            content_no_comments = re.sub(r'//.*?$|/\*.*?\*/', '', content, flags=re.MULTILINE|re.DOTALL)
+            # Fix: avoid matching // in URLs (e.g. https://) by using negative lookbehind (?<!:)
+            content_no_comments = re.sub(r'(?<!:)//.*?$|/\*.*?\*/', '', content, flags=re.MULTILINE|re.DOTALL)
             
             # Remove control characters (e.g. from copy-paste) except newline/tab
             # But be careful not to remove Chinese characters.
@@ -209,12 +210,25 @@ class LLMClient:
         
     def _get_client(self, model_key):
         if model_key not in self.clients:
-            config = LLMConfig.get_config(model_key)
+            config = LLMConfig.MODELS.get(model_key)
+            if not config:
+                # Try getting via get_config which handles fallback, but for connection test we want to be strict?
+                # Actually, let's just be strict.
+                raise ValueError(f"Model '{model_key}' is not configured in llm.json.")
+            
+            api_key = config.get("api_key")
+            base_url = config.get("base_url")
+            
+            if not api_key:
+                raise ValueError(f"Missing 'api_key' for model '{model_key}'")
+            if not base_url:
+                raise ValueError(f"Missing 'base_url' for model '{model_key}'")
+
             self.clients[model_key] = OpenAI(
-                api_key=config["api_key"],
-                base_url=config["base_url"]
+                api_key=api_key,
+                base_url=base_url
             )
-        return self.clients[model_key], LLMConfig.get_config(model_key)["model_name"]
+        return self.clients[model_key], LLMConfig.get_config(model_key).get("model_name", model_key)
 
     def test_connection(self, model_key):
         """Test connection to a specific model"""
@@ -226,8 +240,18 @@ class LLMClient:
                 max_tokens=5
             )
             return True, "OK"
-        except Exception as e:
+        except ValueError as e:
             return False, str(e)
+        except RateLimitError as e:
+            return False, "Rate Limit Exceeded (429). Please check your quota or try again later."
+        except APIError as e:
+            return False, f"API Error: {str(e)}"
+        except Exception as e:
+            # Handle specific API errors if needed, but str(e) is usually enough if it's not just "api_key"
+            error_msg = str(e)
+            if "api_key" in error_msg and "KeyError" in str(type(e)):
+                 return False, f"Configuration Error: Missing API Key for {model_key}"
+            return False, error_msg
 
     def chat_author(self, messages, temperature=0.7, stream=False):
         """Send chat request to Author LLM with auto-retry and switching"""
