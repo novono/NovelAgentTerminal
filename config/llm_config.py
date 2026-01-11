@@ -76,29 +76,47 @@ class LLMConfig:
         """
         config_path = os.path.join(os.path.dirname(__file__), 'llm.json')
         if not os.path.exists(config_path):
-             demo_path = os.path.join(os.path.dirname(__file__), 'llm-demo.json')
-             if os.path.exists(demo_path):
-                 print(f"Warning: config/llm.json not found, using {demo_path}")
-                 config_path = demo_path
-             else:
-                 # Try old name for backward compatibility
-                 demo_config_path = os.path.join(os.path.dirname(__file__), 'llm-demo.config')
-                 if os.path.exists(demo_config_path):
-                     print(f"Warning: config/llm.json not found, using {demo_config_path}")
-                     config_path = demo_config_path
-                 else:
-                     print("Error: config/llm.json not found.")
-                     return
+             print("Error: config/llm.json not found.")
+             print("Please copy config/llm-demo.json to config/llm.json and configure your API keys.")
+             return
 
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 content = f.read()
                 
             # Remove comments (// ... and /* ... */)
+            # Fix: Handle control characters if any (some editors might add them)
+            # Also, strictly parse JSON.
             import re
+            
+            # Simple comment removal
             content_no_comments = re.sub(r'//.*?$|/\*.*?\*/', '', content, flags=re.MULTILINE|re.DOTALL)
             
-            data = json.loads(content_no_comments)
+            # Remove control characters (e.g. from copy-paste) except newline/tab
+            # But be careful not to remove Chinese characters.
+            # json.loads usually handles standard control chars. 
+            # The error "Invalid control character" often means unescaped newline in string or similar.
+            # Or it could be a real control char like \x05.
+            
+            # Let's try to parse directly first if no comments found, or fallback to strict mode?
+            # Actually, the error might be in the file content itself.
+            
+            # Attempt to clean invisible characters if json decode fails?
+            try:
+                data = json.loads(content_no_comments)
+            except json.JSONDecodeError:
+                # Fallback: strict=False allows control characters inside strings in some python versions? 
+                # No, standard json lib doesn't support strict=False for control chars.
+                # We might need to escape them or remove them.
+                # Common issue: newlines in strings.
+                
+                # Let's try to remove non-printable characters that are not whitespace
+                # This regex removes control characters (0-31) except tab, newline, carriage return
+                cleaned = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', content_no_comments)
+                
+                # Also try strict=False
+                data = json.loads(cleaned, strict=False)
+
             cls.MODELS = data.get("models", {})
             active = data.get("active_config", {})
             cls.AUTHOR_MODEL_KEY = active.get("author_model_key", cls.AUTHOR_MODEL_KEY)
